@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CodeRefine | AI Code Optimizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#edf0ff',
+                            100: '#e1e5ff',
+                            200: '#c7cdff',
+                            300: '#a2abff',
+                            400: '#757fff',
+                            500: '#4845ff', // Richer primary
+                            600: '#3324ff',
+                            700: '#261ad6',
+                            800: '#1e16ad',
+                            900: '#1e1785',
+                            950: '#110c4f',
+                        },
+                        dark: {
+                            800: '#0F1117', /* Deep professional dark */
+                            900: '#08090D',
+                            card: '#161B22',
+                            border: '#30363d',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #08090D;
+            background-image:
+                radial-gradient(circle at 50% 0%, rgba(72, 69, 255, 0.15), transparent 60%),
+                radial-gradient(circle at 100% 0%, rgba(131, 56, 236, 0.1), transparent 40%);
+            color: #e6edf3;
+        }
+
+        .glass-panel {
+            background: rgba(22, 27, 34, 0.6);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        }
+
+        .gradient-text {
+            background: linear-gradient(135deg, #757fff 0%, #a2abff 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #181825;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #45475a;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #585b70;
+        }
+
+        .code-input {
+            background: #11111b;
+            color: #a6adc8;
+            /* Subtext0 */
+            caret-color: #cba6f7;
+        }
+    </style>
+</head>
+
+<body class="h-screen flex flex-col overflow-hidden selection:bg-brand-500 selection:text-white">
+
+    <!-- Header -->
+    <header
+        class="h-16 border-b border-dark-border/50 flex items-center justify-between px-6 bg-dark-900/80 backdrop-blur-xl fixed w-full z-50 shadow-sm">
+        <div class="flex items-center gap-3">
+            <div
+                class="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-600 to-brand-500 flex items-center justify-center shadow-lg shadow-brand-500/20 border border-white/10">
+                <i class="fa-solid fa-code text-white text-sm"></i>
+            </div>
+            <h1 class="text-xl font-bold tracking-tight text-white font-sans">Code<span
+                    class="gradient-text">Refine</span></h1>
+        </div>
+
+        <div class="flex items-center gap-4">
+            <!-- Cleaned Header -->
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex pt-16 h-full relative">
+        <!-- Background Glow -->
+        <div
+            class="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[500px] bg-brand-500/10 rounded-full blur-[100px] pointer-events-none opacity-40">
+        </div>
+
+        <div class="w-full h-full flex p-6 gap-6 relative z-10">
+
+            <!-- Left Pane: Input -->
+            <div class="flex-1 flex flex-col gap-4 min-w-0">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="relative">
+                            <select id="languageSelect"
+                                class="bg-dark-card/50 border border-white/10 rounded-lg px-4 py-2 text-sm text-gray-300 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all font-medium appearance-none hover:bg-white/5 cursor-pointer"
+                                onchange="checkLanguageMismatch()">
+                                <option value="python">Python</option>
+                                <option value="javascript">JavaScript</option>
+                                <option value="typescript">TypeScript</option>
+                                <option value="java">Java</option>
+                                <option value="c">C</option>
+                                <option value="cpp">C++</option>
+                                <option value="html">HTML</option>
+                                <option value="css">CSS</option>
+                                <option value="r">R</option>
+                                <option value="go">Go</option>
+                            </select>
+                            <!-- Real-time Mismatch Badge -->
+                            <div id="mismatchBadge"
+                                class="hidden absolute -top-2 -right-2 bg-orange-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full animate-pulse">
+                                !
+                            </div>
+                        </div>
+
+                        <!-- Teaching Mode Toggle -->
+                        <div class="h-6 w-px bg-white/10 mx-3"></div>
+                        <div class="flex items-center bg-dark-card/50 border border-white/10 rounded-lg p-1"
+                            id="teachingModeToggle">
+                            <button onclick="setMode('beginner')"
+                                class="mode-btn px-3 py-1.5 text-xs font-semibold rounded-md transition-all text-gray-400 hover:text-white"
+                                data-mode="beginner">Beginner</button>
+                            <button onclick="setMode('pro')"
+                                class="mode-btn px-3 py-1.5 text-xs font-semibold rounded-md bg-brand-600 text-white shadow-sm ring-1 ring-white/10"
+                                data-mode="pro">Pro</button>
+                        </div>
+
+                        <span class="text-xs text-gray-500 ml-2">Paste your code below</span>
+                    </div>
+                </div>
+
+                <div
+                    class="glass-panel flex-1 rounded-xl overflow-hidden flex flex-col relative group border border-dark-border/50 shadow-2xl">
+                    <textarea id="codeInput"
+                        class="w-full h-full resize-none p-6 font-mono text-sm leading-relaxed code-input focus:outline-none bg-transparent placeholder-gray-600"
+                        spellcheck="false" placeholder="// Paste your legacy code here..."
+                        oninput="checkLanguageMismatch()"></textarea>
+
+                    <!-- Floating Action Buttons -->
+                    <div class="absolute bottom-6 right-6 flex gap-3">
+                        <button id="runBtn" onclick="runCode()"
+                            class="bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-white px-6 py-2.5 rounded-lg shadow-lg shadow-green-500/25 flex items-center gap-2 font-medium transition-all duration-300 transform hover:-translate-y-0.5 border border-white/10">
+                            <i class="fa-solid fa-play text-xs"></i>
+                            <span class="text-xs font-semibold uppercase tracking-wide">Run</span>
+                        </button>
+                        <button id="analyzeBtn" onclick="analyzeCode()"
+                            class="bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-500 hover:to-brand-400 text-white px-6 py-2.5 rounded-lg shadow-lg shadow-brand-500/25 flex items-center gap-2 font-medium transition-all duration-300 transform hover:-translate-y-0.5 border border-white/10">
+                            <i class="fa-solid fa-wand-magic-sparkles text-xs"></i>
+                            <span id="btnText" class="text-xs font-semibold uppercase tracking-wide">Refine Code</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Console Panel -->
+                <div class="glass-panel rounded-xl border border-dark-border/50 shadow-2xl p-4 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-xs font-bold uppercase tracking-wider text-gray-400 flex items-center gap-2">
+                            <i class="fa-solid fa-terminal text-green-400"></i> Console
+                        </h3>
+                        <button onclick="clearConsole()"
+                            class="text-xs text-gray-500 hover:text-gray-300 transition-colors">
+                            <i class="fa-solid fa-trash"></i> Clear
+                        </button>
+                    </div>
+
+                    <!-- Input Section -->
+                    <div>
+                        <label class="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-1 block">Input
+                            (stdin)</label>
+                        <textarea id="consoleInput"
+                            class="w-full bg-dark-900/50 border border-white/10 rounded-lg p-3 font-mono text-xs text-gray-300 focus:outline-none focus:border-brand-500 resize-none"
+                            rows="2" placeholder="Enter inputs (one per line)..."></textarea>
+                    </div>
+
+                    <!-- Output Section -->
+                    <div>
+                        <label
+                            class="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-1 block">Output</label>
+                        <pre id="consoleOutput"
+                            class="w-full bg-black/50 border border-white/10 rounded-lg p-3 font-mono text-xs text-green-400 min-h-[100px] max-h-[200px] overflow-auto whitespace-pre-wrap">Ready to execute...</pre>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Pane: Output -->
+            <div class="flex-1 flex flex-col gap-4 min-w-0">
+                <div class="flex items-center justify-between h-[34px]"> <!-- Match height of select box -->
+                    <h2 class="text-sm font-semibold text-gray-300 flex items-center gap-2">
+                        <i class="fa-solid fa-chart-simple text-brand-500"></i> Analysis Results
+                    </h2>
+                    <!-- Quality Score Circle -->
+                    <div id="qualityScoreContainer" class="hidden flex items-center gap-3">
+                        <div class="relative w-16 h-16">
+                            <svg class="transform -rotate-90 w-16 h-16">
+                                <circle cx="32" cy="32" r="28" stroke="rgba(255,255,255,0.1)" stroke-width="4"
+                                    fill="none" />
+                                <circle id="qualityScoreCircle" cx="32" cy="32" r="28" stroke="#4845ff" stroke-width="4"
+                                    fill="none" stroke-dasharray="176" stroke-dashoffset="176"
+                                    class="transition-all duration-1000 ease-out" stroke-linecap="round" />
+                            </svg>
+                            <div class="absolute inset-0 flex items-center justify-center">
+                                <span id="qualityScoreText" class="text-lg font-bold text-white font-mono">0</span>
+                            </div>
+                        </div>
+                        <div class="text-left">
+                            <div class="text-[10px] uppercase tracking-wider text-gray-500 font-bold">Quality</div>
+                            <div id="qualityScoreLabel" class="text-xs font-semibold text-green-400">Excellent</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="resultsContainer"
+                    class="flex-1 rounded-xl glass-panel relative overflow-y-auto hidden border border-dark-border/50 shadow-2xl">
+                    <!-- Tab Navigation -->
+                    <div
+                        class="sticky top-0 bg-dark-900/95 backdrop-blur-md z-20 border-b border-white/5 flex text-sm font-semibold tracking-wide justify-between items-center pr-4">
+                        <div class="flex flex-1">
+                            <button onclick="switchTab('review')"
+                                class="flex-1 py-4 text-center border-b-2 border-brand-500 text-white tab-btn hover:bg-white/5 transition-colors"
+                                data-tab="review">Review</button>
+                            <button onclick="switchTab('refactored')"
+                                class="flex-1 py-4 text-center border-b-2 border-transparent text-gray-500 hover:text-gray-300 hover:bg-white/5 transition-all tab-btn"
+                                data-tab="refactored">Refactored</button>
+                            <button onclick="switchTab('tests')"
+                                class="flex-1 py-4 text-center border-b-2 border-transparent text-gray-500 hover:text-gray-300 hover:bg-white/5 transition-all tab-btn"
+                                data-tab="tests">Tests</button>
+                            <button onclick="switchTab('docs')"
+                                class="flex-1 py-4 text-center border-b-2 border-transparent text-gray-500 hover:text-gray-300 hover:bg-white/5 transition-all tab-btn"
+                                data-tab="docs">Docs</button>
+                        </div>
+                        <div class="h-full flex items-center border-l border-white/5 pl-4 ml-2">
+                            <button onclick="toggleSplitView()" id="splitViewBtn"
+                                class="text-gray-500 hover:text-brand-400 transition-colors flex items-center gap-2 p-2 rounded-lg hover:bg-white/5"
+                                title="Side-by-Side View">
+                                <i class="fa-solid fa-table-columns"></i>
+                        </div>
+                    </div>
+
+                    <div class="p-6" id="mainContentArea">
+                        <!-- Language Mismatch Warning -->
+                        <div id="langWarning"
+                            class="hidden mb-6 bg-orange-500/10 border border-orange-500/20 rounded-lg p-4 flex items-start gap-3">
+                            <i class="fa-solid fa-triangle-exclamation text-orange-400 mt-1"></i>
+                            <div>
+                                <h3 class="text-sm font-bold text-orange-200 mb-1">Language Mismatch Detected</h3>
+                                <p id="langWarningText" class="text-xs text-orange-200/80">You selected Python, but the
+                                    code
+                                    looks like JavaScript.</p>
+                            </div>
+                        </div>
+
+                        <!-- Review Tab -->
+                        <div id="reviewTab" class="space-y-6 animate-fade-in">
+                            <div id="explanationBox"
+                                class="text-gray-300 text-sm leading-relaxed mb-6 font-medium selection:bg-brand-500/30">
+                            </div>
+
+                            <!-- Stats Grid -->
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                                <div
+                                    class="bg-dark-card/50 border border-white/5 rounded-xl p-4 relative group hover:border-brand-500/30 transition-colors">
+                                    <div class="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-2">Est.
+                                        Runtime</div>
+                                    <div id="complexityVal" class="text-xl font-mono font-bold text-brand-300">~</div>
+                                </div>
+                                <div
+                                    class="bg-dark-card/50 border border-white/5 rounded-xl p-4 relative group hover:border-brand-500/30 transition-colors">
+                                    <div class="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-2">Est.
+                                        Memory</div>
+                                    <div id="memoryVal" class="text-xl font-mono font-bold text-purple-300">~</div>
+                                </div>
+                                <div
+                                    class="bg-dark-card/50 border border-white/5 rounded-xl p-4 relative group hover:border-brand-500/30 transition-colors">
+                                    <div class="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-2">AI
+                                        Confidence</div>
+                                    <div class="flex items-end gap-1">
+                                        <div id="confidenceVal" class="text-xl font-mono font-bold text-green-400">0
+                                        </div>
+                                        <span class="text-xs text-gray-500 mb-1">%</span>
+                                    </div>
+                                </div>
+                                <div
+                                    class="bg-dark-card/50 border border-white/5 rounded-xl p-4 relative group hover:border-brand-500/30 transition-colors">
+                                    <div class="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-2">
+                                        Issues</div>
+                                    <div id="issuesCount" class="text-xl font-mono font-bold text-red-400">0</div>
+                                </div>
+                            </div>
+
+                            <!-- Learning Tips -->
+                            <div id="tipsContainer"
+                                class="hidden mb-6 bg-brand-900/10 border border-brand-500/20 rounded-xl p-5">
+                                <h3
+                                    class="text-xs font-bold uppercase tracking-wider text-brand-300 mb-3 flex items-center gap-2">
+                                    <i class="fa-solid fa-lightbulb"></i> Pro Tips
+                                </h3>
+                                <ul id="tipsList"
+                                    class="space-y-2 text-sm text-brand-100/80 leading-relaxed font-medium">
+                                    <!-- Tips go here -->
+                                </ul>
+                            </div>
+
+                            <div class="space-y-3">
+                                <h3
+                                    class="text-xs font-bold uppercase tracking-wider text-gray-500 mb-4 flex items-center gap-2">
+                                    <i class="fa-solid fa-list-check"></i> Detected Issues
+                                </h3>
+                                <ul id="issuesList" class="space-y-3">
+                                    <!-- Dynamic issues will populate here -->
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- Refactored Code Tab -->
+                        <div id="refactoredTab" class="hidden">
+                            <div class="relative group bg-dark-950/50 rounded-xl border border-white/5 overflow-hidden">
+                                <div class="absolute top-2 right-2 z-10">
+                                    <button onclick="copyToClipboard()"
+                                        class="p-2 text-gray-400 hover:text-white bg-white/5 hover:bg-brand-500 rounded-lg transition-all shadow-lg border border-white/5 backdrop-blur-sm">
+                                        <i class="fa-regular fa-copy"></i>
+                                    </button>
+                                </div>
+                                <pre id="codeOutput"
+                                    class="font-mono text-sm text-brand-100 whitespace-pre-wrap overflow-x-auto p-6 leading-relaxed selection:bg-brand-500/30"></pre>
+                            </div>
+                        </div>
+
+                        <!-- Tests Tab -->
+                        <div id="testsTab" class="hidden">
+                            <div class="relative group bg-dark-950/50 rounded-xl border border-white/5 overflow-hidden">
+                                <div class="absolute top-2 right-2 z-10">
+                                    <button onclick="copyToClipboard('testsOutput')"
+                                        class="p-2 text-gray-400 hover:text-white bg-white/5 hover:bg-brand-500 rounded-lg transition-all shadow-lg border border-white/5 backdrop-blur-sm">
+                                        <i class="fa-regular fa-copy"></i>
+                                    </button>
+                                </div>
+                                <pre id="testsOutput"
+                                    class="font-mono text-sm text-yellow-100 whitespace-pre-wrap overflow-x-auto p-6 leading-relaxed selection:bg-brand-500/30"></pre>
+                            </div>
+                        </div>
+
+                        <!-- Docs Tab -->
+                        <div id="docsTab" class="hidden">
+                            <div class="relative group bg-dark-950/50 rounded-xl border border-white/5 overflow-hidden">
+                                <div class="absolute top-2 right-2 z-10">
+                                    <button onclick="copyToClipboard('docsOutput')"
+                                        class="p-2 text-gray-400 hover:text-white bg-white/5 hover:bg-brand-500 rounded-lg transition-all shadow-lg border border-white/5 backdrop-blur-sm">
+                                        <i class="fa-regular fa-copy"></i>
+                                    </button>
+                                </div>
+                                <pre id="docsOutput"
+                                    class="font-mono text-sm text-blue-100 whitespace-pre-wrap overflow-x-auto p-6 leading-relaxed selection:bg-brand-500/30 font-sans prose prose-invert max-w-none"></pre>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Split View Container (Hidden by default) -->
+                    <div id="splitViewContainer" class="hidden h-full flex flex-col p-4 gap-4">
+                        <div class="grid grid-cols-2 gap-4 h-full">
+                            <!-- Original -->
+                            <div
+                                class="flex flex-col h-full overflow-hidden rounded-xl border border-white/5 bg-dark-950/30">
+                                <div
+                                    class="bg-white/5 px-4 py-2 text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-white/5">
+                                    Original</div>
+                                <pre id="splitOriginal"
+                                    class="flex-1 font-mono text-xs text-gray-400 whitespace-pre-wrap overflow-auto p-4"></pre>
+                            </div>
+                            <!-- Refactored -->
+                            <div
+                                class="flex flex-col h-full overflow-hidden rounded-xl border border-brand-500/20 bg-dark-950/50">
+                                <div
+                                    class="bg-brand-900/20 px-4 py-2 text-xs font-bold text-brand-400 uppercase tracking-wider border-b border-brand-500/10">
+                                    Refactored</div>
+                                <pre id="splitRefactored"
+                                    class="flex-1 font-mono text-xs text-brand-100 whitespace-pre-wrap overflow-auto p-4"></pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Empty State -->
+            <div id="emptyState"
+                class="flex-1 glass-panel rounded-xl flex flex-col items-center justify-center text-center p-8 border border-white/5 bg-gradient-to-b from-white/5 to-transparent">
+                <div
+                    class="w-20 h-20 rounded-2xl bg-gradient-to-br from-brand-600/20 to-brand-500/10 flex items-center justify-center mb-6 border border-brand-500/20 shadow-xl shadow-brand-500/5">
+                    <i class="fa-solid fa-wand-magic-sparkles text-3xl text-brand-400"></i>
+                </div>
+                <h3 class="text-lg font-bold text-white mb-2 tracking-tight">Ready to Refine</h3>
+                <p class="text-sm text-gray-500 max-w-xs leading-relaxed">Paste your code and let our AI engine analyze
+                    performance, security, and quality.</p>
+            </div>
+        </div>
+        </div>
+    </main>
+
+    <script src="app.js"></script>
+    <style>
+        .animate-fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(5px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</body>
+
+</html>
