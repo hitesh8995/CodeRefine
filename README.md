@@ -4,8 +4,17 @@ CodeRefine is a code analysis and optimization tool powered by AI.
 
 ## Project Structure
 
-- **backend/**: FastAPI server handling code analysis.
-- **frontend/**: Static HTML/JS client interface.
+hitesh8995-coderefine/
+    ├── README.md
+    ├── backend/
+    │   ├── main.py
+    │   ├── models.py
+    │   ├── requirements.txt
+    │   ├── services.py
+    │   └── .gitignore.txt
+    └── frontend/
+        ├── app.js
+        └── index.html
 
 ## Prerequisites
 
