@@ -4,6 +4,7 @@ CodeRefine is a code analysis and optimization tool powered by AI.
 
 ## Project Structure
 
+```text
 hitesh8995-coderefine/
     ├── README.md
     ├── backend/
@@ -15,6 +16,7 @@ hitesh8995-coderefine/
     └── frontend/
         ├── app.js
         └── index.html
+```
 
 ## Prerequisites
 
